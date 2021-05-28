@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADAPT SUD CONFIG</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Styles -->
+    <style>
+        #chartdiv {
+            width: 100%;
+            height: 420px;
+        }
+        
+    </style>
+        
+    <!-- Resources -->
+    <script src="https://cdn.amcharts.com/lib/4/core.js"></script>
+    <script src="https://cdn.amcharts.com/lib/4/charts.js"></script>
+    <script src="https://cdn.amcharts.com/lib/4/themes/animated.js"></script>
+
+
+
+</head>
+
+<body>
+
+    <!-- <h2>ADAPT SUD CONFIG</h2> -->
+    <input class="button" type="button" id="connectButton" value="Connect" />
+    <input class="button" type="button" id="disconnectButton" value="Disconnect" />
+
+    <hr />
+    <br />
+
+    <!-- <div id="connected-old">
+        <input id="colourPicker" type="color" />
+        <br /><br />
+        <input class="button" type="button" id="colourButton" value="Send Colour" />
+        <br />
+        <hr />
+
+        Device Heartbeat: <span id="deviceHeartbeat"></span>
+        <br /><br />
+        Button Pressed: <span id="deviceButtonPressed"></span>
+    </div> -->
+
+    <div id="connected">
+        <div>
+            CONNECTED TO ADAPT SUD PORT
+        </div>
+
+        <!-- <button id="set-time-btn">
+            SET TIME
+        </button> -->
+    </div>
+
+
+    <!-- HTML -->
+    <div id="chartdiv"></div>
+
+
+    <script src="main.js" type="module"></script>
+</body>
+
+</html>
