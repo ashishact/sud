@@ -146,7 +146,7 @@ const DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
             count+= value.length;
     
     
-            console.log("COUNT: ", count);
+            console.log("COUNT: ", count, value.length);
     
             if(count >= 3072){
                 insertGraph(buffer);
