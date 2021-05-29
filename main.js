@@ -23,24 +23,32 @@ const DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
         // buffer is Uint8Array
 
         let data = [];
-        let dv = new DataView(buffer.buffer);
 
-        let page_start_time = dv.getUint32(0, true);
-        let if_version = dv.getUint16(4, true);
-
-        let begin_unix =  (page_start_time - 330*60);
-        
-        let j = 0;
-        for(let i = 6; i < buffer.length/2; i+=2, j++){
-            let u16 = dv.getUint16(i);
-            if(u16 !== 0 && u16 !== 0xFFFF){
-                let t = dv.getInt16(i, true)/100;
-                data.push({ date: new Date((begin_unix + j * DATA_COLLECTION_INTERVAL) * 1000), open: t, close: t});
+        if(buffer.length > 6){
+            let dv = new DataView(buffer.buffer);
+    
+            let page_start_time = dv.getUint32(0, true);
+            let if_version = dv.getUint16(4, true);
+    
+            let begin_unix =  (page_start_time - 330*60);
+            
+            let j = 0;
+            for(let i = 6; i < buffer.length/2; i+=2, j++){
+                let u16 = dv.getUint16(i);
+                if(u16 !== 0 && u16 !== 0xFFFF){
+                    let t = dv.getInt16(i, true)/100;
+    
+                    if(t > 200){
+                        t = t - 256;
+                    }
+                    data.push({ date: new Date((begin_unix + j * DATA_COLLECTION_INTERVAL) * 1000), open: t, close: t});
+                }
             }
-        }
-        // data.push({date: new Date(), open: null, close: null});
+            // data.push({date: new Date(), open: null, close: null});
+    
+            // console.log(page_start_time, if_version, new Date(begin_unix*1000));
 
-        // console.log(page_start_time, if_version, new Date(begin_unix*1000));
+        }
 
 
 
@@ -53,22 +61,28 @@ const DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
             var chart = am4core.create("chartdiv", am4charts.XYChart);
             chart.hiddenState.properties.opacity = 0; // this creates initial fade-in
             
-            // var data = [];
-            // var open = 100;
-            // var close = 250;
-            
-            // for (var i = 1; i < 120; i++) {
-            //   open += Math.round((Math.random() < 0.5 ? 1 : -1) * Math.random() * 4);
-            //   close = Math.round(open + Math.random() * 5 + i / 5 - (Math.random() < 0.5 ? 1 : -1) * Math.random() * 2);
-            //   data.push({ date: new Date(2018, 0, i), open: open, close: close });
-            // }
+            // if(!data || !data.length){
+            if(false){
+                data = [];
+                var open = 100;
+                var close = 250;
+                
+                for (var i = 1; i < 120; i++) {
+                  open += Math.round((Math.random() < 0.5 ? 1 : -1) * Math.random() * 4);
+                  close = Math.round(open + Math.random() * 5 + i / 5 - (Math.random() < 0.5 ? 1 : -1) * Math.random() * 2);
+                  data.push({ date: new Date(new Date().getTime() + i*10*60*1000), open: open, close: close });
+                }
+            }
+
             
             chart.data = data;
             
             var dateAxis = chart.xAxes.push(new am4charts.DateAxis());
+            // dateAxis.tooltip.disabled = true;
+
             
             var valueAxis = chart.yAxes.push(new am4charts.ValueAxis());
-            valueAxis.tooltip.disabled = true;
+            // valueAxis.tooltip.disabled = true;
             
             var series = chart.series.push(new am4charts.LineSeries());
             series.dataFields.dateX = "date";
@@ -79,7 +93,7 @@ const DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
             series.fillOpacity = 0.3;
             series.defaultState.transitionDuration = 1000;
             series.tensionX = 0.8;
-            
+
             var series2 = chart.series.push(new am4charts.LineSeries());
             series2.dataFields.dateX = "date";
             series2.dataFields.valueY = "open";
@@ -87,6 +101,11 @@ const DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
             series2.defaultState.transitionDuration = 1500;
             series2.stroke = chart.colors.getIndex(6);
             series2.tensionX = 0.8;
+
+            // @act
+            series.dataItems.template.locations.dateX = 0;
+            series2.dataItems.template.locations.dateX = 0;
+            dateAxis.renderer.tooltipLocation = 0;
             
             chart.cursor = new am4charts.XYCursor();
             chart.cursor.xAxis = dateAxis;
@@ -95,6 +114,7 @@ const DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
         }); // end am4core.ready()
     }
     
+    // insertGraph(new Uint8Array(0));
 
 
     const read = async (port) =>{
@@ -182,7 +202,7 @@ const DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
         port = await navigator.serial.requestPort(filters);
         if(port){
             console.log("CONNECTED TO: ", port);
-            await port.open({ baudRate: 19200 }).catch(console.warn);
+            await port.open({ baudRate: 115200 }).catch(console.warn);
             
     
             const textEncoder = new TextEncoderStream();
