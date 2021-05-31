@@ -237,15 +237,11 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
                 
     
     
-<<<<<<< HEAD
-            console.log("COUNT: ", count, value.length);
-=======
-                
+                // SYNC
                 if(offset + CHUNK_SIZE > BUFFER.length){
                     console.error("10KB Buffer overflow");
                     offset = 0;
                 }
->>>>>>> d6e7e2f9474d49581e43ccc4fd809573d5079d67
     
                 console.log(`+${value.length}`.padEnd(8), `${offset}/${expected_buffer_size}`.padStart(16));
 
