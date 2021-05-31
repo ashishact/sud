@@ -34,7 +34,9 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
             let dv = new DataView(buffer.buffer);
     
             let page_start_time = dv.getUint32(0, true);
-            let if_version = dv.getUint16(4, true);
+            let col_minutes = dv.getUint16(4, true);
+            if(col_minutes < 1) DATA_COLLECTION_INTERVAL = 10; // could be 20/30/40/50 also
+            else DATA_COLLECTION_INTERVAL = col_minutes * 60;
     
             let begin_unix =  (page_start_time - 330*60);
             
@@ -52,7 +54,7 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
             }
             // data.push({date: new Date(), open: null, close: null});
     
-            // console.log(page_start_time, if_version, new Date(begin_unix*1000));
+            // console.log(page_start_time, col_interval, new Date(begin_unix*1000));
 
         }
 
@@ -149,7 +151,7 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
                         msg = msg.substr(0, i);
                     }
                 }
-                console.log("RECEIVED: ", msg);
+                console.log("RECEIVED: ", msg, value);
 
                 if(msg.match){
                     // BULK DATA
@@ -157,8 +159,10 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
                     if(m){
                         let bytes = parseInt(m[1]);
                         if(bytes) expected_buffer_size = bytes;
+
                         chunk_offset = 0;
                         offset = 0;
+                        chunk.fill(0, 0, chunk.length);
 
                         WRITE_MSGS.unshift('O');
                     }
@@ -183,6 +187,7 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
                             }
                         }
                         chunk_offset = 0;
+                        offset = 0;
                         chunk.fill(0, 0, chunk.length);
                     }
 
@@ -194,48 +199,55 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
                         if(c_i){
                             DATA_COLLECTION_INTERVAL = c_i;
                             askCIntervalBtn.innerText = "C INTERVAL ( " + DATA_COLLECTION_INTERVAL + " )";
+
+                            chunk_offset = 0;
+                            offset = 0;
+                            chunk.fill(0, 0, chunk.length);
                         }
                     }
                 }
 
             }
-
-
-            if(chunk_offset >= CHUNK_SIZE){
-                WRITE_MSGS.unshift('O');
-                // Full chunk received
-                BUFFER.set(chunk, offset);
-                offset+= chunk_offset;
-                chunk_offset = 0;
-            }
-
-            if(expected_buffer_size){
-                if(offset + chunk_offset >= expected_buffer_size){
-                    
-                    // All data received
+            else{
+                if(chunk_offset >= CHUNK_SIZE){
+                    WRITE_MSGS.unshift('O');
+                    // Full chunk received
                     BUFFER.set(chunk, offset);
                     offset+= chunk_offset;
-
-
-                    WRITE_MSGS.unshift('K');
-                    console.log(`+${value.length}`.padEnd(8), `${offset}/${expected_buffer_size}`.padStart(16));
-                    insertGraph(BUFFER, expected_buffer_size);
-
                     chunk_offset = 0;
-                    offset = 0;
-                    expected_buffer_size = 0;
                 }
+    
+                if(expected_buffer_size){
+                    if(offset + chunk_offset >= expected_buffer_size){
+                        
+                        // All data received
+                        BUFFER.set(chunk, offset);
+                        offset+= chunk_offset;
+    
+    
+                        WRITE_MSGS.unshift('K');
+                        console.log(`+${value.length}`.padEnd(8), `${offset}/${expected_buffer_size}`.padStart(16));
+                        insertGraph(BUFFER, expected_buffer_size);
+    
+                        chunk_offset = 0;
+                        offset = 0;
+                        expected_buffer_size = 0;
+                    }
+                }
+                
+    
+    
+                
+                if(offset + CHUNK_SIZE > BUFFER.length){
+                    console.error("10KB Buffer overflow");
+                    offset = 0;
+                }
+    
+                console.log(`+${value.length}`.padEnd(8), `${offset}/${expected_buffer_size}`.padStart(16));
+
             }
-            
 
 
-            
-            if(offset + CHUNK_SIZE > BUFFER.length){
-                console.error("10KB Buffer overflow");
-                offset = 0;
-            }
-
-            console.log(`+${value.length}`.padEnd(8), `${offset}/${expected_buffer_size}`.padStart(16));
             wait_read();
         }
 
@@ -352,6 +364,8 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
             if(port){
                 let CMD = "CMD:READ_PAGE,$";
                 WRITE_MSGS.unshift(CMD);
+                
+                expected_buffer_size = 0; // otherwise things will not work
             }
         }
     }
