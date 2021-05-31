@@ -237,7 +237,7 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
                 
     
     
-                // SYNC
+                
                 if(offset + CHUNK_SIZE > BUFFER.length){
                     console.error("10KB Buffer overflow");
                     offset = 0;
