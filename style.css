@@ -1,11 +1,12 @@
-body {
-    text-align: center;
-    font-family: 'Orbitron', sans-serif;
-  }
+body{
+  width: 100%;
+  max-width: 100%;
+  text-align: center;
+}
   
-  .button {
+  #connectButton {
     background-color: black;
-    border: none;
+    border: 2px solid white;
     color: #ffc000;
     padding: 15px 32px;
     text-align: center;
@@ -15,17 +16,24 @@ body {
     cursor: pointer;
     font-size: 24px;
   }
+
+  #connectButton:hover{
+    color: white;
+    border: 2px solid aquamarine;
+  }
   
   #connected, #disconnectButton {
     display: none;
-    font-size: 24px;
   }
-  
-  #pinNumber {
-      font-size: 24px;
-      width: 50px;
+
+  button{
+    font-size: 24px;
   }
 
   #connected{
       text-align: center;
+  }
+
+  select{
+    width: 100%;
   }

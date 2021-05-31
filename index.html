@@ -7,7 +7,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ADAPT SUD CONFIG</title>
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
     <link rel="stylesheet" href="style.css">
+
 
     <!-- Styles -->
     <style>
@@ -22,6 +24,12 @@
     <script src="https://cdn.amcharts.com/lib/4/core.js"></script>
     <script src="https://cdn.amcharts.com/lib/4/charts.js"></script>
     <script src="https://cdn.amcharts.com/lib/4/themes/animated.js"></script>
+
+
+    <!-- Load React. -->
+    <!-- Note: when deploying, replace "development.js" with "production.min.js". -->
+    <!-- <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script> -->
 
 
 
@@ -53,17 +61,66 @@
             CONNECTED TO ADAPT SUD PORT
         </div>
 
-        <!-- <button id="set-time-btn">
+        <button id="set-time-btn">
             SET TIME
-        </button> -->
+        </button>
+
+        <button id="ask-time-btn">
+            ASK TIME
+        </button>
+
+        <button id="ask-c_interval-btn">
+            C INTERVAL
+        </button>
+
+        <button id="get-data-btn">
+            GET DATA
+        </button>
+
+        <!-- <button type="button" id="dialog-trigger" opendialog="dialog"> SET C_INTERVAL </button>  -->
+
+
+        <div id="info"></div>
     </div>
+
+
+    <dialog id="dialog">
+        <header id="show-c_interval"></header>
+        <form method="dialog">
+            <p>Select a collection Interval (seconds)</p>
+            <select name="c_interval-select" id="c_interval-select">
+                <option value="10">10 seconds</option>
+                <option value="30">30 seconds</option>
+                <option value="60">1 minute</option>
+                <option value="120">2 minutes</option>
+                <option value="300">5 minutes</option>
+                <option value="600">10 minutes</option>
+                <option value="1800">30 minutes</option>
+                <option value="3600">1 hour</option>
+                <option value="21600">6 hours</option>
+                <option value="86400">1 day</option>
+            </select>
+            <menu>
+                <button value="cancel">Cancel</button>
+                <button id="confirmBtn" value="confirm">Confirm</button>
+            </menu>
+        </form>
+    </dialog>
+
+    <!-- We will put our React component inside this div. -->
+    <div id="like_button_container"></div>
 
 
     <!-- HTML -->
     <div id="chartdiv"></div>
 
 
+    <!-- Load our React component. -->
+    <!-- <script src="like_button.js"></script> -->
+
+
     <script src="main.js" type="module"></script>
+
 </body>
 
 </html>
