@@ -24,7 +24,7 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
 
     const infoDiv = document.getElementById("info");
 
-
+    let chart = null;
     let insertGraph = (buffer)=>{
         // buffer is Uint8Array
 
@@ -66,7 +66,9 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
             am4core.useTheme(am4themes_animated);
             // Themes end
             
-            var chart = am4core.create("chartdiv", am4charts.XYChart);
+            if(chart) chart.dispose();
+
+            chart = am4core.create("chartdiv", am4charts.XYChart);
             chart.hiddenState.properties.opacity = 0; // this creates initial fade-in
             
             // if(!data || !data.length){
@@ -135,7 +137,10 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
         let chunk_offset = 0;
         const reader = port.readable.getReader();
 
+        let IS_READING = false; // No recursion, no waiting the event loop
         let wait_read = async () => {
+            IS_READING = true; // at the end set to false
+
             const r  = await reader.read().catch(console.warn);
             if(!r) return;
             const { value, done } = r;
@@ -144,14 +149,14 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
             chunk_offset+= value.length;
 
             if(expected_buffer_size === 0){
-                let msg =  new TextDecoder().decode(chunk);
-                // chunk has lots of 0 at end
-                for(let i = 0; i < msg.length; i++){
-                    if(msg.charCodeAt(i) === 0){
-                        msg = msg.substr(0, i);
-                    }
-                }
-                console.log("RECEIVED: ", msg, value);
+                let msg =  new TextDecoder().decode(chunk.slice(0, chunk_offset));
+                // msg = msg.split('').map(c => {
+                //     if(32 <= c.charCodeAt(0) && c.charCodeAt(0) <= 127) return c;
+                //     if(c === '\r' || c === '\n') return c;
+                //     return '';
+                // }).join('');
+
+                console.log("RECEIVED: ", msg);
 
                 if(msg.match){
                     // BULK DATA
@@ -248,10 +253,14 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
             }
 
 
-            wait_read();
+            IS_READING = false; // at begining it was set to true
         }
 
-        wait_read();
+        setInterval(async ()=>{
+            if(!IS_READING){
+                wait_read();
+            }
+        }, 1)
     }
 
     const WRITE_MSGS = [];
@@ -261,11 +270,13 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
 
         const writer = textEncoder.writable.getWriter();
 
+        let IS_WRITTING = false;
         setInterval(async ()=>{
-            if(WRITE_MSGS.length){
+            if(!IS_WRITTING && WRITE_MSGS.length){
                 let m = WRITE_MSGS.pop(); // use unshift to put at the begining
+                IS_WRITTING = true;
                 await writer.write(m);
-                // console.log("WRITTING: ", m);
+                IS_WRITTING = false;
             }
         }, 1);
 
