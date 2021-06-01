@@ -7,7 +7,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ADAPT SUD CONFIG</title>
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css"> -->
+    <link rel="stylesheet" href="water.min.css">
     <link rel="stylesheet" href="style.css">
 
 
@@ -85,9 +86,9 @@
 
 
     <dialog id="dialog">
-        <header id="show-c_interval"></header>
+        <header id="show-c_interval">Select a collection Interval</header>
         <form method="dialog">
-            <p>Select a collection Interval (seconds)</p>
+            <p id="current-value"></p>
             <select name="c_interval-select" id="c_interval-select">
                 <option value="10">10 seconds</option>
                 <option value="30">30 seconds</option>
@@ -103,6 +104,18 @@
             <menu>
                 <button value="cancel">Cancel</button>
                 <button id="confirmBtn" value="confirm">Confirm</button>
+            </menu>
+        </form>
+    </dialog>
+
+
+
+    <dialog id="info-dialog">
+        <header></header>
+        <form method="dialog">
+            <p></p>
+            <menu>
+                <button value="OK">OK</button>
             </menu>
         </form>
     </dialog>

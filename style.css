@@ -4,7 +4,7 @@ body{
   text-align: center;
 }
   
-  #connectButton {
+#connectButton {
     background-color: black;
     border: 2px solid white;
     color: #ffc000;
@@ -36,4 +36,9 @@ body{
 
   select{
     width: 100%;
+  }
+
+  #info-dialog menu{
+    text-align: center;
+    padding: 0;
   }

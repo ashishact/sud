@@ -1,7 +1,22 @@
 
+
+
 const MIN_IN_SEC = 60;
 let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
 
+
+// enum CDC_APP_ERROR_CODE{
+//     CDC_APP_ERR_NONE,
+//     CDC_APP_ERR_IN_SESSION__CANNOT_CHANGE_VALUE
+// }CURR_ERR;
+
+const CDC_APP_ERROR_CODE = {
+    NONE: 0, 
+    IN_SESSION__CANNOT_CHANGE_VALUE: 1
+}
+
+
+let REQ_ID = 1;
 
 (function() {
     
@@ -23,8 +38,35 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
     const setCIntervalBtn = document.getElementById("get-c_interval-btn");
 
     const infoDiv = document.getElementById("info");
+    const infoDialog = document.getElementById("info-dialog");
+
+    const showInfoDialog = (message, options)=>{
+        let el = document.querySelector("#info-dialog");
+        if(!el) return console.warn("NO INFO DIALOG");
+
+        if(message){
+            let headerEl = document.querySelector("#info-dialog header");
+            if(headerEl){
+                headerEl.innerText = message;
+            }
+        }
+
+        if (Array.isArray(options)){
+            let menuEl = document.querySelector("#info-dialog menu");
+            if(menuEl){
+                let d = document.createElement("div");
+                d.innerHTML = options.map(o=> (`<button>${o}</button>`)) 
+                
+                menuEl.appendChild(d);
+            }
+        }
+
+        el.showModal();
+    }
 
 
+
+    let chart = null;
     let insertGraph = (buffer)=>{
         // buffer is Uint8Array
 
@@ -37,6 +79,8 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
             let col_minutes = dv.getUint16(4, true);
             if(col_minutes < 1) DATA_COLLECTION_INTERVAL = 10; // could be 20/30/40/50 also
             else DATA_COLLECTION_INTERVAL = col_minutes * 60;
+
+            console.log("DATA_COLLECTION_INTERVAL: ", DATA_COLLECTION_INTERVAL);
     
             let begin_unix =  (page_start_time - 330*60);
             
@@ -66,7 +110,9 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
             am4core.useTheme(am4themes_animated);
             // Themes end
             
-            var chart = am4core.create("chartdiv", am4charts.XYChart);
+            if(chart) chart.dispose();
+
+            chart = am4core.create("chartdiv", am4charts.XYChart);
             chart.hiddenState.properties.opacity = 0; // this creates initial fade-in
             
             // if(!data || !data.length){
@@ -127,15 +173,25 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
     let expected_buffer_size = 0;
     let offset = 0;
 
-    let read_timer_id = 0;
     
+
+    let port = null;
+    const timer = {
+        read_id: null,
+        write_id: null
+    }
+
+
     const read_serial = async (port) =>{
         const CHUNK_SIZE = 250;
         let chunk = new Uint8Array(CHUNK_SIZE + 1024); // extra 
         let chunk_offset = 0;
         const reader = port.readable.getReader();
 
+        let IS_READING = false; // No recursion, no waiting the event loop
         let wait_read = async () => {
+            IS_READING = true; // at the end set to false
+
             const r  = await reader.read().catch(console.warn);
             if(!r) return;
             const { value, done } = r;
@@ -144,14 +200,8 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
             chunk_offset+= value.length;
 
             if(expected_buffer_size === 0){
-                let msg =  new TextDecoder().decode(chunk);
-                // chunk has lots of 0 at end
-                for(let i = 0; i < msg.length; i++){
-                    if(msg.charCodeAt(i) === 0){
-                        msg = msg.substr(0, i);
-                    }
-                }
-                console.log("RECEIVED: ", msg, value);
+                let msg =  new TextDecoder().decode(chunk.slice(0, chunk_offset));
+                console.log("RECEIVED: ", msg);
 
                 if(msg.match){
                     // BULK DATA
@@ -159,10 +209,8 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
                     if(m){
                         let bytes = parseInt(m[1]);
                         if(bytes) expected_buffer_size = bytes;
-
-                        chunk_offset = 0;
                         offset = 0;
-                        chunk.fill(0, 0, chunk.length);
+                        chunk_offset = 0;
 
                         WRITE_MSGS.unshift('O');
                     }
@@ -186,9 +234,6 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
                                 console.log(info);
                             }
                         }
-                        chunk_offset = 0;
-                        offset = 0;
-                        chunk.fill(0, 0, chunk.length);
                     }
 
 
@@ -199,11 +244,24 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
                         if(c_i){
                             DATA_COLLECTION_INTERVAL = c_i;
                             askCIntervalBtn.innerText = "C INTERVAL ( " + DATA_COLLECTION_INTERVAL + " )";
-
-                            chunk_offset = 0;
-                            offset = 0;
-                            chunk.fill(0, 0, chunk.length);
                         }
+                    }
+
+                    // ERR:1,ID:3,$
+                    m = msg.match(/ERR:(\d+),ID:(\d+)/);
+                    if(m){
+                        let ec = parseInt(m[1]);
+                        if(ec === CDC_APP_ERROR_CODE.IN_SESSION__CANNOT_CHANGE_VALUE){
+                            showInfoDialog("IN SESSION. CAN'T CHANGE. FIRST STOP THE SESSION")
+                        }
+                    }
+
+
+                    // ALL MESSAGE RECEIVED
+                    if(msg.indexOf("$") > 0){
+                        chunk_offset = 0;
+                        offset = 0;
+                        chunk.fill(0, 0, chunk.length);
                     }
                 }
 
@@ -225,6 +283,7 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
                         offset+= chunk_offset;
     
     
+                        WRITE_MSGS.unshift('O');
                         WRITE_MSGS.unshift('K');
                         console.log(`+${value.length}`.padEnd(8), `${offset}/${expected_buffer_size}`.padStart(16));
                         insertGraph(BUFFER, expected_buffer_size);
@@ -248,10 +307,15 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
             }
 
 
-            wait_read();
+            IS_READING = false; // at begining it was set to true
         }
 
-        wait_read();
+        if(timer.read_id) clearInterval(timer.read_id);
+        timer.read_id = setInterval(async ()=>{
+            if(!IS_READING){
+                wait_read();
+            }
+        }, 1)
     }
 
     const WRITE_MSGS = [];
@@ -261,25 +325,27 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
 
         const writer = textEncoder.writable.getWriter();
 
-        setInterval(async ()=>{
-            if(WRITE_MSGS.length){
+
+        let IS_WRITTING = false;
+        if(timer.write_id) clearInterval(timer.write_id);
+        timer.write_id = setInterval(async ()=>{
+            if(port && !IS_WRITTING && WRITE_MSGS.length){
+                IS_WRITTING = true;
                 let m = WRITE_MSGS.pop(); // use unshift to put at the begining
+                m = m.replace("$", `ID:${REQ_ID}$`); REQ_ID+=1;
+                if(REQ_ID >= 0xFFFF - 1) REQ_ID = 1; // In device req_id is uint16_t
                 await writer.write(m);
-                // console.log("WRITTING: ", m);
+                IS_WRITTING = false;
             }
         }, 1);
-
-
-        // while(true){
-            
-        //     // await writer.write(`UNIX:${Math.floor(new Date().getTime()/1000) - (new Date().getTimezoneOffset()*60)},$`);
-        //     // await writer.write("CMD:READ_PAGE,$");
-        // }
     }
 
- 
     
-    let port = null;
+    
+    
+
+    
+
     let try_connect = async () =>{
         // https://web.dev/serial/
         console.log("TRYING TO CONNECT TO SUD");
@@ -293,6 +359,7 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
             console.log("CONNECTED TO: ", port);
             let r = await port.open({ baudRate: 115200 }).catch(console.warn);
             console.log("PORT OPEN ", r);
+
             write_serial(port).catch(console.warn);
             read_serial(port).catch(console.warn);
         }
@@ -345,8 +412,13 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
                 WRITE_MSGS.unshift(CMD);
 
                 setTimeout(()=>{
+                    let el = document.querySelector("dialog #current-value");
+                    console.log(el);
+                    if(el){
+                        el.innerText = "Current value: " + DATA_COLLECTION_INTERVAL + " seconds";
+                    }
                     dialogEl.showModal();
-                }, 100);
+                }, 1000);
             }
         }
     }
@@ -374,7 +446,7 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
 
         if ("serial" in navigator) {
             // The Web Serial API is supported.
-            navigator.serial.addEventListener("connect", (event) => {
+            navigator.serial.addEventListener("connect", async (event) => {
                 // TODO: Automatically open event.target or warn user a port is available.
                 // console.log("Connected", event);
                 let info = event.target.getInfo();
@@ -383,7 +455,12 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
                     console.log("ADAPT SUD CONNECTED");
                 }
 
-                try_connect();
+                await try_connect().catch(console.warn);
+
+                if(port){
+                    connected.style.display = 'block';
+                    connectButton.style.display = 'none';
+                }
             });
 
 
@@ -399,7 +476,8 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
                 if(info.usbProductId === 10 && info.usbVendorId === 1240){
                     console.log("ADAPT SUD DIS-CONNECTED");
 
-                    clearInterval(read_timer_id);
+                    clearInterval(timer.read_id);
+                    clearInterval(timer.write_id);
 
                     connected.style.display = 'none';
                     connectButton.style.display = 'initial';
@@ -421,14 +499,7 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
     var confirmBtn = document.getElementById('confirmBtn');
     
 
-    // "Update details" button opens the <dialog> modally
-    // dialogTriggerBtn.addEventListener('click', function onOpen() {
-    //     if (typeof dialogEl.showModal === "function") {
-    //         dialogEl.showModal();
-    //     } else {
-    //         alert("The <dialog> API is not supported by this browser");
-    //     }
-    // });
+  
     let col_interval_select_value = 10;
     selectEl.addEventListener('change', function onChange(e) {
         col_interval_select_value = this.value;
@@ -445,6 +516,12 @@ let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
 
             let CMD = `C_INTERVAL:${DATA_COLLECTION_INTERVAL}?,$`;
             WRITE_MSGS.unshift(CMD);
+
+            setTimeout(()=>{
+                // Get interval
+                let CMD = "C_INTERVAL?,$";
+                WRITE_MSGS.unshift(CMD);
+            }, 1000)
         }
     });
 
