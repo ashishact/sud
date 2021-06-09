@@ -79,10 +79,10 @@ let REQ_ID = 1;
 
             let page_start_time = dv.getUint32(0, true);
             let col_sh = dv.getUint16(4, true);
-            if(col_sh > TWELVE_HOUR_IN_SEC) {​​​​​
+            if(col_sh > TWELVE_HOUR_IN_SEC) {
                 col_sh = (col_sh - TWELVE_HOUR_IN_SEC) * HOUR_IN_SEC; // Hours * HOURS_IN_SECONDS
-            }​​​​​
-            else{​​​​​
+            }
+            else{
                 DATA_COLLECTION_INTERVAL = col_sh; // In seconds
             }
 
