@@ -1,5 +1,6 @@
 
-
+const HOUR_IN_SEC                = 60*60;
+const TWELVE_HOUR_IN_SEC         = 12 * HOUR_IN_SEC;
 
 const MIN_IN_SEC = 60;
 let DATA_COLLECTION_INTERVAL = 10 * MIN_IN_SEC;
@@ -75,11 +76,17 @@ let REQ_ID = 1;
         if(buffer.length > 6){
             let dv = new DataView(buffer.buffer);
     
-            let page_start_time = dv.getUint32(0, true);
-            let col_minutes = dv.getUint16(4, true);
-            if(col_minutes < 1) DATA_COLLECTION_INTERVAL = 10; // could be 20/30/40/50 also
-            else DATA_COLLECTION_INTERVAL = col_minutes * 60;
 
+            let page_start_time = dv.getUint32(0, true);
+            let col_sh = dv.getUint16(4, true);
+            if(col_sh > TWELVE_HOUR_IN_SEC) {​​​​​
+                col_sh = (col_sh - TWELVE_HOUR_IN_SEC) * HOUR_IN_SEC; // Hours * HOURS_IN_SECONDS
+            }​​​​​
+            else{​​​​​
+                DATA_COLLECTION_INTERVAL = col_sh; // In seconds
+            }
+
+            
             console.log("DATA_COLLECTION_INTERVAL: ", DATA_COLLECTION_INTERVAL);
     
             let begin_unix =  (page_start_time - 330*60);
